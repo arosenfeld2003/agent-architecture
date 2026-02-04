@@ -1,0 +1,7 @@
+# Docker volumes are managed separately
+# Don't track workspace contents
+workspace/
+
+# Environment files with secrets
+.env
+.env.local

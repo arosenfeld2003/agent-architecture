@@ -1,0 +1,105 @@
+# Domain Allowlist for AI Coding Agents
+# One domain per line, prefix with . to allow subdomains
+# Lines starting with # are comments
+#
+# This is a unified allowlist for all AI coding agents:
+# - Claude Code
+# - OpenAI Codex
+# - Cursor
+# - Wispr
+# - Generic development tools
+
+# =============================================================================
+# GITHUB - Source control and collaboration
+# =============================================================================
+.github.com
+.githubusercontent.com
+.githubassets.com
+.github.dev
+.github.io
+
+# =============================================================================
+# NPM / NODE.JS - Package management
+# =============================================================================
+.npmjs.org
+.npmjs.com
+.yarnpkg.com
+
+# =============================================================================
+# ANTHROPIC - Claude AI services
+# =============================================================================
+.anthropic.com
+.claude.ai
+
+# =============================================================================
+# OPENAI - Codex and GPT services
+# =============================================================================
+.openai.com
+.oaiusercontent.com
+
+# =============================================================================
+# VS CODE / CURSOR - IDE support
+# =============================================================================
+.visualstudio.com
+.vscode.dev
+.vscode-cdn.net
+.vsassets.io
+.gallerycdn.vsassets.io
+marketplace.visualstudio.com
+vscode.blob.core.windows.net
+update.code.visualstudio.com
+
+# =============================================================================
+# SENTRY - Error reporting (Claude Code uses this)
+# =============================================================================
+.sentry.io
+.sentry-cdn.com
+
+# =============================================================================
+# STATSIG - Feature flags (Claude Code uses this)
+# =============================================================================
+.statsig.com
+statsig.anthropic.com
+
+# =============================================================================
+# PYPI - Python package management
+# =============================================================================
+.pypi.org
+.pythonhosted.org
+
+# =============================================================================
+# ADDITIONAL DEVELOPMENT SERVICES
+# =============================================================================
+# Docker Hub (for pulling images)
+.docker.io
+.docker.com
+
+# Homebrew (for macOS package management)
+.brew.sh
+.homebrew.bintray.com
+
+# =============================================================================
+# CLOUD PROVIDERS (common CDNs and APIs)
+# =============================================================================
+# AWS
+.amazonaws.com
+
+# Azure (for VS Code services)
+.azure.com
+.microsoftonline.com
+.microsoft.com
+
+# Cloudflare (used by many services)
+.cloudflare.com
+
+# Fastly (used by npm, GitHub)
+.fastly.net
+
+# =============================================================================
+# DOCUMENTATION SITES (optional - add as needed)
+# =============================================================================
+# Uncomment these if agents need access to documentation
+# .docs.github.com
+# .developer.mozilla.org
+# .nodejs.org
+# .python.org
