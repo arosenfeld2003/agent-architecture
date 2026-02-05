@@ -20,7 +20,7 @@ services:
       - proxy-cache:/var/spool/squid
       - proxy-logs:/var/log/squid
     healthcheck:
-      test: ["CMD", "squid", "-k", "check"]
+      test: ["CMD", "nc", "-z", "localhost", "3128"]
       interval: 30s
       timeout: 10s
       retries: 3
