@@ -47,6 +47,46 @@ docker compose exec claude /usr/local/bin/verify-proxy.sh
 ./scripts/stop.sh
 ```
 
+## Testing Claude Code in the Container
+
+To run Claude Code interactively inside the isolated container:
+
+```bash
+# Start the environment (if not already running)
+docker compose up -d
+
+# Run Claude Code interactively (-it flags required for input)
+docker compose exec -it claude claude
+```
+
+On first run, Claude will prompt you to authenticate with your Anthropic API key.
+
+### Verifying Proxy Isolation
+
+Once inside Claude, test that the proxy is working:
+
+**Allowed requests (should succeed):**
+- Ask Claude to fetch from GitHub, npm, or Anthropic APIs
+- Run: `npm install lodash`
+- Run: `git clone https://github.com/octocat/Hello-World`
+
+**Blocked requests (should fail):**
+- Ask Claude to fetch `https://example.com`
+- Ask Claude to fetch `https://httpbin.org/get`
+
+### Monitoring Proxy Traffic
+
+In a separate terminal, watch the proxy logs to see requests being allowed or denied:
+
+```bash
+# Real-time log of all requests
+docker exec agent-proxy tail -f /var/log/squid/access.log
+```
+
+Log entries show:
+- `TCP_TUNNEL/200` - Allowed HTTPS connection
+- `TCP_DENIED/403` - Blocked by allowlist
+
 ## Configuration
 
 ### Modifying the Allowlist
