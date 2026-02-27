@@ -56,6 +56,8 @@ services:
       - NODE_OPTIONS=--max-old-space-size=4096
       # Claude config
       - CLAUDE_CONFIG_DIR=/home/node/.claude
+      # API key — set ANTHROPIC_API_KEY in your shell or .env file
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - DEVCONTAINER=true
       # Shell customization
       - POWERLEVEL9K_DISABLE_GITSTATUS=true

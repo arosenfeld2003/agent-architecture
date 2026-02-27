@@ -197,6 +197,7 @@ Set these before starting:
 | `TZ` | `America/Los_Angeles` | Timezone |
 | `CLAUDE_CODE_VERSION` | `latest` | Claude Code npm package version |
 | `PERMISSIONS_FILE` | `./agent/permissions.json` | Filesystem permissions config |
+| `ANTHROPIC_API_KEY` | *(none)* | API key for Claude Code authentication |
 
 ### Proxy Configuration
 
@@ -221,7 +222,8 @@ proxy-isolation/
 │   ├── entrypoint.sh           # Applies filesystem ACLs, drops to node user
 │   ├── permissions.json        # Default filesystem permissions config
 │   ├── verify-proxy.sh         # Network isolation verification
-│   └── verify-permissions.sh   # Filesystem permission verification
+│   ├── verify-permissions.sh   # Filesystem permission verification
+│   └── verify-claude.sh        # End-to-end Claude Code integration test
 ├── scripts/
 │   ├── start.sh                # Start environment
 │   ├── stop.sh                 # Stop environment
@@ -230,32 +232,77 @@ proxy-isolation/
 └── README.md                   # This file
 ```
 
-## Demo: Testing Filesystem Isolation
+## Demo: Filesystem Isolation with Claude Code
 
-Follow these steps to verify that the filesystem isolation layer is working correctly.
+This demo proves that an AI coding agent (Claude Code) running inside the container respects the filesystem sandbox — it can write to allowed paths and is blocked from restricted ones.
 
 ### Prerequisites
 
 - Docker Desktop 4.38+ with Docker Compose
 - Git
+- An Anthropic API key ([get one here](https://console.anthropic.com/settings/keys))
 
 ### 1. Clone and Start
 
 ```bash
 git clone https://github.com/arosenfeld2003/agent-architecture.git
 cd agent-architecture/claude-devcontainer/proxy-isolation
+
+# Set your API key
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Start the environment
 ./scripts/start.sh ./workspace
 ```
 
-### 2. Run the Automated Test Suite
+### 2. Run the Claude Code Integration Test
+
+This is the main demo. It launches Claude Code inside the container and verifies it can write to `/workspace` (allowed) but is denied writing to `/etc` (restricted):
+
+```bash
+docker compose exec -u node claude /usr/local/bin/verify-claude.sh
+```
+
+Expected output:
+
+```
+============================================
+Claude Code Integration Test
+============================================
+
+1. Checking Claude Code installation...
+✓ PASS: Claude Code is installed
+
+2. Checking authentication...
+✓ PASS: ANTHROPIC_API_KEY is set
+
+3. Verifying Claude can respond...
+✓ PASS: Claude responded successfully
+
+4. Testing Claude can write to /workspace (allowed path)...
+✓ PASS: Claude wrote to /workspace/test.txt successfully
+
+5. Testing Claude cannot write to /etc (denied path)...
+✓ PASS: /etc/test.txt was not created — write correctly denied
+
+============================================
+Summary: 5 passed, 0 failed
+============================================
+
+All tests passed! Claude Code works correctly inside the sandbox.
+```
+
+### 3. Run the Filesystem Permission Test Suite
+
+For a deeper check of the ACL layer (without invoking Claude), run the permissions verifier:
 
 ```bash
 docker compose exec -u node claude /usr/local/bin/verify-permissions.sh
 ```
 
-This runs 12 checks covering readable, writable, and denied paths. All tests should pass.
+This runs 12 checks covering readable, writable, and denied paths.
 
-### 3. Try It Interactively
+### 4. Try It Interactively
 
 ```bash
 docker compose exec -u node claude bash
@@ -284,7 +331,7 @@ Exit the container when done:
 exit
 ```
 
-### 4. Clean Up
+### 5. Clean Up
 
 ```bash
 ./scripts/stop.sh

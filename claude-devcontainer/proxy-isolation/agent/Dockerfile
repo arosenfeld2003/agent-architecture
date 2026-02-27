@@ -94,7 +94,8 @@ RUN chmod +x /usr/local/bin/verify-proxy.sh
 COPY permissions.json /etc/agent-permissions.json
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY verify-permissions.sh /usr/local/bin/verify-permissions.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/verify-permissions.sh
+COPY verify-claude.sh /usr/local/bin/verify-claude.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/verify-permissions.sh /usr/local/bin/verify-claude.sh
 
 # NOTE: No final USER directive here. The entrypoint runs as root to apply
 # filesystem ACLs, then drops to the node user via gosu.
