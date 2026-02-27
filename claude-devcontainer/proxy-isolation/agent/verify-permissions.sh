@@ -140,10 +140,10 @@ echo ""
 # Test that ACLs are actually applied (if getfacl is available)
 echo "5. Checking ACL presence..."
 if command -v getfacl >/dev/null 2>&1; then
-    if getfacl /workspace 2>/dev/null | grep -q "user:node"; then
-        pass "ACLs are set on /workspace"
+    if getfacl /root 2>/dev/null | grep -q "user:node:---"; then
+        pass "ACLs are set on /root (deny rule for node)"
     else
-        warn "No explicit ACLs found on /workspace (may use standard permissions)"
+        warn "No explicit ACLs found on /root"
     fi
 else
     warn "getfacl not available, cannot inspect ACLs directly"
