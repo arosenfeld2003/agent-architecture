@@ -230,6 +230,70 @@ proxy-isolation/
 └── README.md                   # This file
 ```
 
+## Demo: Testing Filesystem Isolation
+
+Follow these steps to verify that the filesystem isolation layer is working correctly.
+
+### Prerequisites
+
+- Docker Desktop 4.38+ with Docker Compose
+- Git
+
+### 1. Clone and Start
+
+```bash
+git clone https://github.com/arosenfeld2003/agent-architecture.git
+cd agent-architecture/claude-devcontainer/proxy-isolation
+./scripts/start.sh ./workspace
+```
+
+### 2. Run the Automated Test Suite
+
+```bash
+docker compose exec -u node claude /usr/local/bin/verify-permissions.sh
+```
+
+This runs 12 checks covering readable, writable, and denied paths. All tests should pass.
+
+### 3. Try It Interactively
+
+```bash
+docker compose exec -u node claude bash
+```
+
+**These should succeed:**
+
+```bash
+touch /workspace/hello.txt        # workspace is writable
+ls /usr/bin                       # system binaries are readable
+echo "test" > /tmp/test.txt       # tmp is writable
+```
+
+**These should be blocked:**
+
+```bash
+cat /etc/shadow                   # denied — sensitive file
+ls /root                          # denied — root home directory
+touch /etc/hacked                 # denied — /etc is read-only
+touch /usr/bin/malicious          # denied — /usr is read-only
+```
+
+Exit the container when done:
+
+```bash
+exit
+```
+
+### 4. Clean Up
+
+```bash
+./scripts/stop.sh
+```
+
+### How It Works
+
+All permissions are declared in `agent/permissions.json`. The entrypoint applies POSIX ACLs at startup via `setfacl`, then drops privileges to the `node` user. No code changes are needed to adjust the rules — just edit the JSON and restart the container.
+
 ## Comparison to iptables Approach
 
 | Feature | iptables (old) | Proxy (new) |
