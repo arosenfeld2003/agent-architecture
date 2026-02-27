@@ -26,6 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     curl \
     ca-certificates \
+    acl \
+    gosu \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure default node user has access to /usr/local/share
@@ -87,7 +89,16 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 COPY --chown=node:node verify-proxy.sh /usr/local/bin/
 USER root
 RUN chmod +x /usr/local/bin/verify-proxy.sh
-USER node
+
+# Copy filesystem permissions config and enforcement scripts
+COPY permissions.json /etc/agent-permissions.json
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY verify-permissions.sh /usr/local/bin/verify-permissions.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/verify-permissions.sh
+
+# NOTE: No final USER directive here. The entrypoint runs as root to apply
+# filesystem ACLs, then drops to the node user via gosu.
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Default command - start shell
 CMD ["zsh"]

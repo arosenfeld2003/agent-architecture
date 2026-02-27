@@ -1,30 +1,47 @@
-# Proxy-Based Network Isolation for AI Coding Agents
+# Sandboxed AI Coding Agent with Network + Filesystem Isolation
 
-This directory contains a Docker Compose setup that provides network isolation for AI coding agents using an HTTP proxy (Squid) as a controlled gateway.
+This directory contains a Docker Compose setup that provides **two layers of isolation** for AI coding agents:
+
+1. **Network isolation** — Squid HTTP proxy as the only gateway to the internet, with a domain allowlist
+2. **Filesystem isolation** — POSIX ACLs enforced at container startup via a declarative `permissions.json`
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Docker Environment                       │
-│                                                              │
-│   ┌─────────────────┐      ┌─────────────────┐              │
-│   │   AI Agent      │      │   Squid Proxy   │              │
-│   │ (Claude/Codex)  │─────►│   (allowlist)   │──────►Internet
-│   │                 │      │                 │              │
-│   └─────────────────┘      └─────────────────┘              │
-│           │                        │                         │
-│       [isolated]               [isolated]                    │
-│       network                  + [external]                  │
-│      (internal)                 networks                     │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       Docker Environment                          │
+│                                                                   │
+│   ┌──────────────────────────────────┐                            │
+│   │          AI Agent Container       │                            │
+│   │                                   │                            │
+│   │   ┌───────────────────────────┐   │                            │
+│   │   │   Filesystem ACLs         │   │                            │
+│   │   │   (permissions.json)      │   │                            │
+│   │   │                           │   │                            │
+│   │   │  /workspace    → rw       │   │     ┌─────────────────┐   │
+│   │   │  /usr, /etc    → r        │   │     │   Squid Proxy   │   │
+│   │   │  /root         → denied   │   ├────►│   (allowlist)   │──►│Internet
+│   │   │  /etc/shadow   → denied   │   │     │                 │   │
+│   │   └───────────────────────────┘   │     └─────────────────┘   │
+│   │                                   │             │              │
+│   └──────────────────────────────────┘             │              │
+│              │                                      │              │
+│          [isolated network]                [isolated + external]   │
+│           (internal only)                    networks              │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+
+Security Layers:
+  Layer 1: Docker internal network — no direct internet access
+  Layer 2: Squid proxy — domain allowlist (proxy/allowlist.txt)
+  Layer 3: Filesystem ACLs — path-based read/write control (agent/permissions.json)
 ```
 
 **Key Points:**
 - Agent container is on an **internal Docker network** with no direct internet access
 - All HTTP/HTTPS traffic is routed through the Squid proxy via environment variables
-- Proxy enforces a domain allowlist - only approved domains can be reached
+- Proxy enforces a domain allowlist — only approved domains can be reached
+- Filesystem access is controlled by POSIX ACLs applied at startup from `permissions.json`
 - No `NET_ADMIN` or `NET_RAW` capabilities required
 - Works with Docker Desktop 4.38+
 
@@ -39,6 +56,9 @@ This directory contains a Docker Compose setup that provides network isolation f
 
 # Verify network isolation is working
 docker compose exec claude /usr/local/bin/verify-proxy.sh
+
+# Verify filesystem permissions are enforced
+docker compose exec claude /usr/local/bin/verify-permissions.sh
 
 # View proxy logs
 ./scripts/logs.sh --follow
@@ -87,7 +107,67 @@ Log entries show:
 - `TCP_TUNNEL/200` - Allowed HTTPS connection
 - `TCP_DENIED/403` - Blocked by allowlist
 
-## Configuration
+## Filesystem Permissions
+
+### How It Works
+
+At container startup, an entrypoint script (`entrypoint.sh`) runs as root, reads `/etc/agent-permissions.json`, and applies POSIX ACLs using `setfacl` for the `node` user. It then drops privileges to `node` via `gosu` before executing the container's CMD.
+
+The permissions file is mounted read-only (`:ro`) into the container, so the agent cannot modify its own restrictions.
+
+### Permissions JSON Format
+
+The permissions config (`agent/permissions.json`) defines which paths the agent can access:
+
+```json
+{
+  "version": "1",
+  "defaultPolicy": "deny",
+  "rules": [
+    { "path": "/workspace", "access": "readwrite", "recursive": true },
+    { "path": "/workspace/.env", "access": "none" },
+    { "path": "/home/node/.claude", "access": "readwrite", "recursive": true },
+    { "path": "/tmp", "access": "readwrite", "recursive": true },
+    { "path": "/usr", "access": "read", "recursive": true },
+    { "path": "/etc", "access": "read", "recursive": true },
+    { "path": "/root", "access": "none", "recursive": true },
+    { "path": "/etc/shadow", "access": "none" }
+  ]
+}
+```
+
+| Field | Values | Description |
+|-------|--------|-------------|
+| `access` | `read`, `write`, `readwrite`, `none` | Permission level |
+| `recursive` | `true` (default), `false` | Apply to all children |
+| `defaultPolicy` | `deny`, `allow` | What happens to unlisted paths |
+
+Rules are evaluated in order. More specific paths (e.g., `/workspace/.env`) should come after broader paths (e.g., `/workspace`) to override them.
+
+### Using a Custom Permissions File
+
+Pass your own permissions file via environment variable:
+
+```bash
+PERMISSIONS_FILE=/path/to/my-permissions.json ./scripts/start.sh /path/to/workspace
+```
+
+Or set it in your `.env` file:
+
+```
+PERMISSIONS_FILE=./custom-permissions.json
+```
+
+### Verifying Permissions
+
+```bash
+# Run the verification script inside the container
+docker compose exec claude /usr/local/bin/verify-permissions.sh
+```
+
+This tests that readable paths are accessible, writable paths accept writes, and denied paths are blocked.
+
+## Network Configuration
 
 ### Modifying the Allowlist
 
@@ -116,6 +196,7 @@ Set these before starting:
 | `WORKSPACE_PATH` | `../workspace` | Path to mount as `/workspace` |
 | `TZ` | `America/Los_Angeles` | Timezone |
 | `CLAUDE_CODE_VERSION` | `latest` | Claude Code npm package version |
+| `PERMISSIONS_FILE` | `./agent/permissions.json` | Filesystem permissions config |
 
 ### Proxy Configuration
 
@@ -130,20 +211,23 @@ The Squid configuration (`proxy/squid.conf`) can be customized:
 
 ```
 proxy-isolation/
-├── docker-compose.yml      # Main compose file
+├── docker-compose.yml          # Main compose file
 ├── proxy/
-│   ├── Dockerfile          # Squid proxy image
-│   ├── squid.conf          # Squid configuration
-│   └── allowlist.txt       # Allowed domains
+│   ├── Dockerfile              # Squid proxy image
+│   ├── squid.conf              # Squid configuration
+│   └── allowlist.txt           # Allowed domains
 ├── agent/
-│   ├── Dockerfile          # Agent container image
-│   └── verify-proxy.sh     # Network verification script
+│   ├── Dockerfile              # Agent container image
+│   ├── entrypoint.sh           # Applies filesystem ACLs, drops to node user
+│   ├── permissions.json        # Default filesystem permissions config
+│   ├── verify-proxy.sh         # Network isolation verification
+│   └── verify-permissions.sh   # Filesystem permission verification
 ├── scripts/
-│   ├── start.sh            # Start environment
-│   ├── stop.sh             # Stop environment
-│   ├── shell.sh            # Enter agent shell
-│   └── logs.sh             # View proxy logs
-└── README.md               # This file
+│   ├── start.sh                # Start environment
+│   ├── stop.sh                 # Stop environment
+│   ├── shell.sh                # Enter agent shell
+│   └── logs.sh                 # View proxy logs
+└── README.md                   # This file
 ```
 
 ## Comparison to iptables Approach

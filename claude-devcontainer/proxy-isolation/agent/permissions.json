@@ -1,0 +1,89 @@
+{
+  "version": "1",
+  "defaultPolicy": "deny",
+  "rules": [
+    {
+      "path": "/workspace",
+      "access": "readwrite",
+      "recursive": true
+    },
+    {
+      "path": "/home/node/.claude",
+      "access": "readwrite",
+      "recursive": true
+    },
+    {
+      "path": "/home/node/.zshrc",
+      "access": "read"
+    },
+    {
+      "path": "/home/node/.zsh_history",
+      "access": "readwrite"
+    },
+    {
+      "path": "/commandhistory",
+      "access": "readwrite",
+      "recursive": true
+    },
+    {
+      "path": "/tmp",
+      "access": "readwrite",
+      "recursive": true
+    },
+    {
+      "path": "/usr",
+      "access": "read",
+      "recursive": true
+    },
+    {
+      "path": "/lib",
+      "access": "read",
+      "recursive": true
+    },
+    {
+      "path": "/bin",
+      "access": "read",
+      "recursive": true
+    },
+    {
+      "path": "/sbin",
+      "access": "read",
+      "recursive": true
+    },
+    {
+      "path": "/etc",
+      "access": "read",
+      "recursive": true
+    },
+    {
+      "path": "/proc",
+      "access": "read",
+      "recursive": true
+    },
+    {
+      "path": "/dev/null",
+      "access": "readwrite"
+    },
+    {
+      "path": "/dev/urandom",
+      "access": "read"
+    },
+    {
+      "path": "/dev/zero",
+      "access": "read"
+    },
+    {
+      "path": "/root",
+      "access": "none",
+      "recursive": true
+    },
+    {
+      "path": "/etc/shadow",
+      "access": "none"
+    },
+    {
+      "path": "/etc/sudoers",
+      "access": "none"
+    }
+  ]
+}
