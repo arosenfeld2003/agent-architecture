@@ -63,6 +63,8 @@ services:
       - claude-bashhistory:/commandhistory
       - claude-config:/home/node/.claude
       - ${WORKSPACE_PATH:-./../workspace}:/workspace:delegated
+      # Filesystem permissions config (read-only so agent cannot modify it)
+      - ${PERMISSIONS_FILE:-./agent/permissions.json}:/etc/agent-permissions.json:ro
     working_dir: /workspace
     stdin_open: true
     tty: true

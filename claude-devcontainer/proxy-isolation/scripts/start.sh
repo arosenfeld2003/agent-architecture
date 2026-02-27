@@ -18,9 +18,25 @@ export WORKSPACE_PATH
 export TZ="${TZ:-America/Los_Angeles}"
 export CLAUDE_CODE_VERSION="${CLAUDE_CODE_VERSION:-latest}"
 
+# Validate and export permissions file
+PERMISSIONS_FILE="${PERMISSIONS_FILE:-$PROJECT_DIR/agent/permissions.json}"
+if [ -f "$PERMISSIONS_FILE" ]; then
+    if ! jq empty "$PERMISSIONS_FILE" 2>/dev/null; then
+        echo "ERROR: Invalid JSON in permissions file: $PERMISSIONS_FILE"
+        exit 1
+    fi
+    RULE_COUNT=$(jq '.rules | length' "$PERMISSIONS_FILE")
+else
+    RULE_COUNT=0
+    echo "WARNING: No permissions file found at $PERMISSIONS_FILE"
+    echo "  Agent will run without filesystem restrictions"
+fi
+export PERMISSIONS_FILE
+
 echo "Starting proxy-isolated agent environment..."
-echo "  Workspace: $WORKSPACE_PATH"
-echo "  Timezone:  $TZ"
+echo "  Workspace:   $WORKSPACE_PATH"
+echo "  Timezone:    $TZ"
+echo "  Permissions: $PERMISSIONS_FILE ($RULE_COUNT rules)"
 echo ""
 
 cd "$PROJECT_DIR"
@@ -51,6 +67,9 @@ echo "  docker compose exec claude zsh"
 echo ""
 echo "To verify network isolation:"
 echo "  docker compose exec claude /usr/local/bin/verify-proxy.sh"
+echo ""
+echo "To verify filesystem permissions:"
+echo "  docker compose exec claude /usr/local/bin/verify-permissions.sh"
 echo ""
 echo "To view proxy logs:"
 echo "  docker compose logs -f proxy"
